@@ -101,14 +101,6 @@ export const systemBypassListSubcommand = {
       name: 'List bypass rules',
       value: `${packageName} firewall system-bypass list`,
     },
-    {
-      name: 'Add a bypass for an IP',
-      value: `${packageName} firewall system-bypass add 10.0.0.1`,
-    },
-    {
-      name: 'Remove a bypass',
-      value: `${packageName} firewall system-bypass remove 10.0.0.1`,
-    },
   ],
 } as const;
 
@@ -184,6 +176,14 @@ export const systemBypassSubcommand = {
     {
       name: 'List bypass rules',
       value: `${packageName} firewall system-bypass list`,
+    },
+    {
+      name: 'Add a bypass for an IP',
+      value: `${packageName} firewall system-bypass add 10.0.0.1`,
+    },
+    {
+      name: 'Remove a bypass',
+      value: `${packageName} firewall system-bypass remove 10.0.0.1`,
     },
   ],
 } as const;

@@ -46,7 +46,7 @@ describe('firewall discard', () => {
     client.setArgv('firewall', 'discard');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
-    await expect(client.stderr).toOutput('No staged changes to discard.');
+    await expect(client.stderr).toOutput('No draft changes to discard.');
   });
 
   it('should discard draft changes with --yes', async () => {
@@ -63,7 +63,7 @@ describe('firewall discard', () => {
 
     client.setArgv('firewall', 'discard', '--yes');
     const exitCodePromise = firewall(client);
-    await expect(client.stderr).toOutput('Staged changes discarded');
+    await expect(client.stderr).toOutput('Draft changes discarded');
     expect(await exitCodePromise).toEqual(0);
   });
 
