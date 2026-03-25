@@ -11,6 +11,9 @@ import {
   diffSubcommand,
   publishSubcommand,
   discardSubcommand,
+  systemBypassSubcommand,
+  attackModeSubcommand,
+  systemMitigationsSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
@@ -22,6 +25,9 @@ const COMMAND_CONFIG = {
   diff: getCommandAliases(diffSubcommand),
   publish: getCommandAliases(publishSubcommand),
   discard: getCommandAliases(discardSubcommand),
+  'system-bypass': getCommandAliases(systemBypassSubcommand),
+  'attack-mode': getCommandAliases(attackModeSubcommand),
+  'system-mitigations': getCommandAliases(systemMitigationsSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -98,6 +104,30 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandDiscard(subcommandOriginal);
       return (await import('./discard')).default(client, args);
+    case 'system-bypass':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(systemBypassSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandSystemBypass(subcommandOriginal);
+      return (await import('./system-bypass')).default(client, args);
+    case 'attack-mode':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(attackModeSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandAttackMode(subcommandOriginal);
+      return (await import('./attack-mode')).default(client, args);
+    case 'system-mitigations':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(systemMitigationsSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandSystemMitigations(subcommandOriginal);
+      return (await import('./system-mitigations')).default(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(firewallCommand, { columns: client.stderr.columns }));
