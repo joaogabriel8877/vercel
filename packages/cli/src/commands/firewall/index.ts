@@ -11,6 +11,7 @@ import {
   diffSubcommand,
   publishSubcommand,
   discardSubcommand,
+  ipBlocksSubcommand,
   systemBypassSubcommand,
   attackModeSubcommand,
   systemMitigationsSubcommand,
@@ -25,6 +26,7 @@ const COMMAND_CONFIG = {
   diff: getCommandAliases(diffSubcommand),
   publish: getCommandAliases(publishSubcommand),
   discard: getCommandAliases(discardSubcommand),
+  'ip-blocks': getCommandAliases(ipBlocksSubcommand),
   'system-bypass': getCommandAliases(systemBypassSubcommand),
   'attack-mode': getCommandAliases(attackModeSubcommand),
   'system-mitigations': getCommandAliases(systemMitigationsSubcommand),
@@ -104,6 +106,11 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandDiscard(subcommandOriginal);
       return (await import('./discard')).default(client, args);
+    case 'ip-blocks': {
+      telemetry.trackCliSubcommandIpBlocks(subcommandOriginal);
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return (await import('./ip-blocks')).default(client, nestedArgs);
+    }
     case 'system-bypass': {
       telemetry.trackCliSubcommandSystemBypass(subcommandOriginal);
       const nestedArgs = needHelp ? [...args, '--help'] : args;
