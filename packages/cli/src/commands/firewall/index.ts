@@ -104,30 +104,21 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandDiscard(subcommandOriginal);
       return (await import('./discard')).default(client, args);
-    case 'system-bypass':
-      if (needHelp) {
-        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
-        printHelp(systemBypassSubcommand);
-        return 2;
-      }
+    case 'system-bypass': {
       telemetry.trackCliSubcommandSystemBypass(subcommandOriginal);
-      return (await import('./system-bypass')).default(client, args);
-    case 'attack-mode':
-      if (needHelp) {
-        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
-        printHelp(attackModeSubcommand);
-        return 2;
-      }
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return (await import('./system-bypass')).default(client, nestedArgs);
+    }
+    case 'attack-mode': {
       telemetry.trackCliSubcommandAttackMode(subcommandOriginal);
-      return (await import('./attack-mode')).default(client, args);
-    case 'system-mitigations':
-      if (needHelp) {
-        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
-        printHelp(systemMitigationsSubcommand);
-        return 2;
-      }
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return (await import('./attack-mode')).default(client, nestedArgs);
+    }
+    case 'system-mitigations': {
       telemetry.trackCliSubcommandSystemMitigations(subcommandOriginal);
-      return (await import('./system-mitigations')).default(client, args);
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return (await import('./system-mitigations')).default(client, nestedArgs);
+    }
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(firewallCommand, { columns: client.stderr.columns }));
