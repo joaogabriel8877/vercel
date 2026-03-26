@@ -409,6 +409,85 @@ export const ipBlocksSubcommand = {
   ],
 } as const;
 
+// Rules subcommands
+export const rulesListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List custom firewall rules',
+  arguments: [],
+  options: [
+    {
+      name: 'expand',
+      shorthand: 'e',
+      type: Boolean,
+      deprecated: false,
+      description: 'Show full condition details for each rule',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'List rules',
+      value: `${packageName} firewall rules list`,
+    },
+    {
+      name: 'List rules with full condition details',
+      value: `${packageName} firewall rules list --expand`,
+    },
+  ],
+} as const;
+
+export const rulesInspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description: 'Show full details of a custom firewall rule',
+  arguments: [{ name: 'name-or-id', required: true }],
+  options: [
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'Inspect a rule by name',
+      value: `${packageName} firewall rules inspect "Block bots"`,
+    },
+    {
+      name: 'Inspect a rule by ID',
+      value: `${packageName} firewall rules inspect rule_abc123`,
+    },
+  ],
+} as const;
+
+export const rulesSubcommand = {
+  name: 'rules',
+  aliases: [],
+  description: 'Manage custom firewall rules',
+  arguments: [],
+  subcommands: [rulesListSubcommand, rulesInspectSubcommand],
+  options: [],
+  examples: [
+    {
+      name: 'List rules',
+      value: `${packageName} firewall rules list`,
+    },
+    {
+      name: 'Inspect a rule',
+      value: `${packageName} firewall rules inspect "Block bots"`,
+    },
+  ],
+} as const;
+
 export const firewallCommand = {
   name: 'firewall',
   aliases: [],
@@ -417,10 +496,11 @@ export const firewallCommand = {
   arguments: [],
   subcommands: [
     statusSubcommand,
+    rulesSubcommand,
+    ipBlocksSubcommand,
     diffSubcommand,
     publishSubcommand,
     discardSubcommand,
-    ipBlocksSubcommand,
     systemBypassSubcommand,
     attackModeSubcommand,
     systemMitigationsSubcommand,
@@ -432,16 +512,16 @@ export const firewallCommand = {
       value: `${packageName} firewall status`,
     },
     {
+      name: 'List custom rules',
+      value: `${packageName} firewall rules list`,
+    },
+    {
       name: 'Show pending changes',
       value: `${packageName} firewall diff`,
     },
     {
       name: 'Block an IP address',
       value: `${packageName} firewall ip-blocks block 1.2.3.4`,
-    },
-    {
-      name: 'Add a system bypass for an IP',
-      value: `${packageName} firewall system-bypass add 10.0.0.1`,
     },
     {
       name: 'Enable attack mode',
