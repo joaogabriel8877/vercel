@@ -59,6 +59,7 @@ export default async function unblock(client: Client, argv: string[]) {
 
     // Disambiguate if multiple matches
     if (matches.length > 1) {
+      output.stopSpinner();
       if (client.nonInteractive || !client.stdin.isTTY) {
         output.error(
           `Multiple IP blocks match "${identifier}". Specify the full rule ID to disambiguate.`
