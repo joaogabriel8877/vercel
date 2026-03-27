@@ -1,3 +1,4 @@
+import { isIP } from 'node:net';
 import chalk from 'chalk';
 import type Client from '../../../util/client';
 import output from '../../../output-manager';
@@ -301,11 +302,13 @@ async function buildConditionInteractive(
       });
       value = valStr.split(',').map((v: string) => v.trim());
     } else if (op === 're') {
-      // Regex — validate as valid RegExp
+      // Regex — validate as valid RegExp with length limit
       const valStr = await client.input.text({
-        message: 'Regex pattern:',
+        message: 'Regex pattern (max 512 chars):',
         validate: (val: string) => {
           if (!val.trim()) return 'Regex pattern is required.';
+          if (val.length > 512)
+            return 'Regex pattern must be 512 characters or less.';
           try {
             new RegExp(val);
             return true;
@@ -531,14 +534,21 @@ function validateConditionValue(
       if (!val.startsWith('/')) return 'Path must start with /';
       return true;
     case 'ip': {
-      const { isIP } = require('node:net');
       if (isIP(val)) return true;
       // Check CIDR
       const slashIdx = val.lastIndexOf('/');
       if (slashIdx !== -1) {
-        const ip = val.slice(0, slashIdx);
+        const ipPart = val.slice(0, slashIdx);
         const prefix = Number.parseInt(val.slice(slashIdx + 1), 10);
-        if (isIP(ip) && !Number.isNaN(prefix) && prefix >= 0) return true;
+        const version = isIP(ipPart);
+        const maxPrefix = version === 4 ? 32 : 128;
+        if (
+          version &&
+          !Number.isNaN(prefix) &&
+          prefix >= 0 &&
+          prefix <= maxPrefix
+        )
+          return true;
       }
       return 'Please enter a valid IP address or CIDR range.';
     }

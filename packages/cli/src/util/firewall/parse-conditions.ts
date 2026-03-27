@@ -104,12 +104,10 @@ export function parseConditionFlag(flag: string): FirewallCondition | string {
     op = opRaw.slice(1);
   }
 
-  // Validate operator
-  if (!ALL_OPERATORS.includes(op)) {
-    const validOps = meta
-      ? meta.operators.join(', ')
-      : ALL_OPERATORS.join(', ');
-    return `Invalid operator "${opRaw}" for condition type "${type}". Valid operators: ${validOps}`;
+  // Validate operator — use per-type list when available, fall back to global for unknown types
+  const validOps = meta ? meta.operators : ALL_OPERATORS;
+  if (!validOps.includes(op)) {
+    return `Invalid operator "${opRaw}" for condition type "${type}". Valid operators: ${validOps.join(', ')}`;
   }
 
   // Build the condition
@@ -143,9 +141,12 @@ export function parseConditionFlag(flag: string): FirewallCondition | string {
     }
     condition.value = num;
   } else if (op === 're') {
-    // Regex operator — validate as valid RegExp
+    // Regex operator — validate as valid RegExp with length limit
     if (!valueRaw) {
       return `Operator "re" requires a regex pattern.`;
+    }
+    if (valueRaw.length > 512) {
+      return 'Regex pattern must be 512 characters or less.';
     }
     try {
       new RegExp(valueRaw);

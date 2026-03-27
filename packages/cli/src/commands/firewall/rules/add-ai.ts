@@ -62,6 +62,33 @@ export async function handleAIAdd(
           output.warn(`AI generation failed: ${response.error}. Retrying...`);
           continue;
         }
+
+        // In interactive mode (without --yes), offer retry with a new description
+        if (client.stdin.isTTY && !client.nonInteractive && !opts.skipPrompts) {
+          const retryChoice = await client.input.select({
+            message: `AI could not generate a rule: ${response.error}`,
+            choices: [
+              {
+                value: 'retry',
+                name: 'Try again with a different description',
+              },
+              { value: 'cancel', name: 'Cancel' },
+            ],
+          });
+
+          if (retryChoice === 'cancel') {
+            output.log('Canceled');
+            return 0;
+          }
+
+          prompt = await client.input.text({
+            message: 'Describe the rule you want to create:',
+            validate: (val: string) =>
+              val.trim() ? true : 'Please provide a description.',
+          });
+          continue;
+        }
+
         output.error(`AI could not generate a rule: ${response.error}`);
         return 1;
       }
@@ -76,8 +103,8 @@ export async function handleAIAdd(
 
       currentRule = response.rule;
 
-      // Apply name override if provided
-      if (opts.name && !currentRule.name) {
+      // User-provided name always takes precedence over AI-generated name
+      if (opts.name) {
         currentRule.name = opts.name;
       }
 
@@ -129,15 +156,21 @@ export async function handleAIAdd(
 
   // Review menu loop
   for (;;) {
-    const choice = await client.input.select({
-      message: 'What would you like to do?',
-      choices: [
-        { value: 'create', name: 'Create this rule' },
-        { value: 'edit-ai', name: 'Edit with AI (describe changes)' },
-        { value: 'edit-manual', name: 'Edit manually (step by step)' },
-        { value: 'discard', name: 'Discard' },
-      ],
-    });
+    let choice: string;
+    try {
+      choice = await client.input.select({
+        message: 'What would you like to do?',
+        choices: [
+          { value: 'create', name: 'Create this rule' },
+          { value: 'edit-ai', name: 'Edit with AI (describe changes)' },
+          { value: 'edit-manual', name: 'Edit manually (step by step)' },
+          { value: 'discard', name: 'Discard' },
+        ],
+      });
+    } catch {
+      // stdin closed or prompt aborted
+      return 1;
+    }
 
     if (choice === 'create') {
       return createFromGenerated(client, project, teamId, currentRule!, opts);

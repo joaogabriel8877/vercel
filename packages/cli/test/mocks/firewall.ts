@@ -270,13 +270,17 @@ export function useUpdateAttackMode() {
   });
 }
 
+export let lastPatchBody: any = null;
+
 export function usePatchDraft(
   responseOverrides: Partial<FirewallConfigResponse> = {}
 ) {
+  lastPatchBody = null;
   client.scenario.patch(
     '/v1/security/firewall/config/draft',
     (req: any, res: any) => {
       const patch = req.body;
+      lastPatchBody = patch;
       res.json(
         createConfig({
           id: 'config_draft',

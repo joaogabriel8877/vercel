@@ -22,7 +22,6 @@ import { formatRuleExpanded } from '../../../util/firewall/format';
 import type {
   FirewallRule,
   FirewallRuleAction,
-  FirewallConditionGroup,
 } from '../../../util/firewall/types';
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
@@ -73,8 +72,8 @@ export default async function add(client: Client, argv: string[]) {
   }
 
   if (conditionFlags) {
-    // Flag mode
-    return handleFlagAdd(client, parsed, conditionFlags);
+    // Flag mode — pass original argv for --or group reconstruction
+    return handleFlagAdd(client, parsed, argv);
   }
 
   // No mode specified — interactive or error
@@ -185,9 +184,15 @@ async function handleJsonAdd(
     output.error('Rule name must be 160 characters or less.');
     return 1;
   }
-  if (ruleData.description && (ruleData.description as string).length > 256) {
-    output.error('Rule description must be 256 characters or less.');
-    return 1;
+  if (ruleData.description !== undefined && ruleData.description !== null) {
+    if (typeof ruleData.description !== 'string') {
+      output.error('JSON "description" field must be a string.');
+      return 1;
+    }
+    if (ruleData.description.length > 256) {
+      output.error('Rule description must be 256 characters or less.');
+      return 1;
+    }
   }
   if ((ruleData.conditionGroup as unknown[]).length > 25) {
     output.error('Maximum 25 condition groups allowed.');
@@ -211,10 +216,35 @@ async function handleJsonAdd(
 
 // --- Flag mode ---
 
+/**
+ * Extract --condition values and --or markers from raw argv in order.
+ * Returns an interleaved array where condition values alternate with '--or' markers.
+ * This preserves the grouping intent that the standard arg parser loses.
+ */
+function extractConditionFlags(argv: string[]): string[] {
+  const result: string[] = [];
+  let i = 0;
+  while (i < argv.length) {
+    if (argv[i] === '--or') {
+      result.push('--or');
+      i++;
+    } else if (argv[i] === '--condition' && i + 1 < argv.length) {
+      result.push(argv[i + 1]);
+      i += 2;
+    } else if (argv[i].startsWith('--condition=')) {
+      result.push(argv[i].slice('--condition='.length));
+      i++;
+    } else {
+      i++; // skip non-condition flags (--action, --yes, name, etc.)
+    }
+  }
+  return result;
+}
+
 async function handleFlagAdd(
   client: Client,
   parsed: { args: string[]; flags: Record<string, unknown> },
-  conditionFlags: string[]
+  rawArgv: string[]
 ): Promise<number> {
   // Parse name
   const name = parsed.args[0] as string | undefined;
@@ -229,55 +259,24 @@ async function handleFlagAdd(
     return 1;
   }
 
-  // Parse conditions (with --or support)
-  // We need to reconstruct the interleaved --condition and --or flags
-  // from the raw argv to preserve ordering
-  const rawArgs = parsed.flags['--condition'] as string[] | undefined;
-  if (!rawArgs || rawArgs.length === 0) {
+  // Parse conditions with --or group support
+  // Scan the raw argv to preserve the interleaved ordering of --condition and --or flags
+  const interleaved = extractConditionFlags(rawArgv);
+  if (interleaved.length === 0) {
     output.error('At least one --condition is required.');
     return 1;
   }
 
-  // Build the interleaved flag list by scanning the original argv
-  // The parsed flags give us --condition values and --or as boolean
-  // But we need the ordering. For simplicity, treat all conditions as one AND group
-  // unless --or is set, in which case we use the raw flag order.
-  const hasOr = parsed.flags['--or'] as boolean | undefined;
-  let conditionGroups: FirewallConditionGroup[];
+  const condResult = parseConditionFlags(interleaved);
+  if (typeof condResult === 'string') {
+    output.error(condResult);
+    return 1;
+  }
+  const conditionGroups = condResult.groups;
 
-  if (hasOr) {
-    // Reconstruct interleaved order from argv
-    const interleaved: string[] = [];
-    const condValues = [...rawArgs];
-    let condIdx = 0;
-
-    // Walk through the original command argv to find --condition and --or ordering
-    for (const arg of client.argv) {
-      if (arg === '--or') {
-        interleaved.push('--or');
-      } else if (arg === '--condition' || arg.startsWith('--condition=')) {
-        // The next value in condValues corresponds to this --condition
-        if (condIdx < condValues.length) {
-          interleaved.push(condValues[condIdx]);
-          condIdx++;
-        }
-      }
-    }
-
-    const result = parseConditionFlags(interleaved);
-    if (typeof result === 'string') {
-      output.error(result);
-      return 1;
-    }
-    conditionGroups = result.groups;
-  } else {
-    // Simple case: all conditions in one AND group
-    const result = parseConditionFlags(rawArgs);
-    if (typeof result === 'string') {
-      output.error(result);
-      return 1;
-    }
-    conditionGroups = result.groups;
+  if (conditionGroups.length > 25) {
+    output.error('Maximum 25 condition groups allowed.');
+    return 1;
   }
 
   // Parse action

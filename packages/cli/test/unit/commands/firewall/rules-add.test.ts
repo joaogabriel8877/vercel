@@ -10,6 +10,7 @@ import {
   useGenerateFirewallRuleError,
   createConfig,
   createChange,
+  lastPatchBody,
 } from '../../../mocks/firewall';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
@@ -422,6 +423,69 @@ describe('firewall rules add', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Rule "Colon value" staged');
       expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should not split commas in non-inc operator values', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Comma test',
+        '--condition',
+        'path:eq:/api,v2',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "Comma test" staged');
+      expect(await exitCodePromise).toEqual(0);
+
+      // Verify the value was sent as a single string, not split
+      expect(lastPatchBody).toBeTruthy();
+      expect(lastPatchBody.value.conditionGroup[0].conditions[0].value).toBe(
+        '/api,v2'
+      );
+    });
+
+    it('should verify OR groups produce correct request body structure', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'OR body test',
+        '--condition',
+        'user_agent:sub:bot',
+        '--condition',
+        'geo_country:eq:CN',
+        '--or',
+        '--condition',
+        'ip_address:eq:5.5.5.5',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "OR body test" staged');
+      expect(await exitCodePromise).toEqual(0);
+
+      // Verify: Group 1 has 2 AND conditions, Group 2 has 1 condition
+      expect(lastPatchBody).toBeTruthy();
+      const groups = lastPatchBody.value.conditionGroup;
+      expect(groups).toHaveLength(2);
+      expect(groups[0].conditions).toHaveLength(2);
+      expect(groups[0].conditions[0].type).toBe('user_agent');
+      expect(groups[0].conditions[1].type).toBe('geo_country');
+      expect(groups[1].conditions).toHaveLength(1);
+      expect(groups[1].conditions[0].type).toBe('ip_address');
     });
   });
 
