@@ -17,24 +17,35 @@ export default function getLocalPathConfig(prefix: string) {
     return path.resolve(prefix, customPath);
   }
 
-  // Otherwise check for either `vercel.json` or `now.json`.
-  // Throw an error if both exist.
+  // Otherwise check for `vercel.json`, `vercel.toml`, or `now.json`.
+  // Throw an error if more than one exists.
   const vercelConfigPath = path.join(prefix, 'vercel.json');
+  const vercelTomlPath = path.join(prefix, 'vercel.toml');
   const nowConfigPath = path.join(prefix, 'now.json');
 
   const vercelConfigExists = existsSync(vercelConfigPath);
+  const vercelTomlExists = existsSync(vercelTomlPath);
   const nowConfigExists = existsSync(nowConfigPath);
 
-  if (nowConfigExists && vercelConfigExists) {
-    throw new ConflictingConfigFiles([vercelConfigPath, nowConfigPath]);
+  const foundConfigs: string[] = [];
+  if (vercelConfigExists) foundConfigs.push(vercelConfigPath);
+  if (vercelTomlExists) foundConfigs.push(vercelTomlPath);
+  if (nowConfigExists) foundConfigs.push(nowConfigPath);
+
+  if (foundConfigs.length > 1) {
+    throw new ConflictingConfigFiles(foundConfigs);
   }
 
-  // Check for compiled vercel.ts first
+  // Check for compiled vercel.ts/vercel.toml first
   const compiledConfigPath = path.join(prefix, VERCEL_DIR, 'vercel.json');
   const compiledConfigExists = existsSync(compiledConfigPath);
 
   if (compiledConfigExists) {
     return compiledConfigPath;
+  }
+
+  if (vercelTomlExists) {
+    return vercelTomlPath;
   }
 
   if (nowConfigExists) {
