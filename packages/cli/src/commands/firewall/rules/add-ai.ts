@@ -163,7 +163,6 @@ export async function handleAIAdd(
         choices: [
           { value: 'create', name: 'Create this rule' },
           { value: 'edit-ai', name: 'Edit with AI (describe changes)' },
-          { value: 'edit-manual', name: 'Edit manually (step by step)' },
           { value: 'discard', name: 'Discard' },
         ],
       });
@@ -219,14 +218,6 @@ export async function handleAIAdd(
         );
         continue;
       }
-    }
-
-    if (choice === 'edit-manual') {
-      const { addInteractive } = await import('./add-interactive');
-      return addInteractive(client, project, teamId, {
-        prePopulated: currentRule,
-        skipPrompts: opts.skipPrompts,
-      });
     }
 
     if (choice === 'discard') {

@@ -1313,9 +1313,8 @@ describe('firewall rules add', () => {
       await expect(client.stderr).toOutput('Describe the rule');
       client.stdin.write('Block bots\n');
 
-      // Preview shows, select "Discard" (4th option)
+      // Preview shows, select "Discard" (3rd option)
       await expect(client.stderr).toOutput('What would you like to do?');
-      client.stdin.write('\x1B[B'); // down
       client.stdin.write('\x1B[B'); // down
       client.stdin.write('\x1B[B'); // down to "Discard"
       client.stdin.write('\n');
