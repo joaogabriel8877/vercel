@@ -77,6 +77,19 @@ export default async function add(client: Client, argv: string[]) {
     return handleFlagAdd(client, parsed, argv);
   }
 
+  // Check if structural flags were passed without --condition
+  const hasStructuralFlags =
+    parsed.flags['--action'] ||
+    parsed.flags['--duration'] ||
+    parsed.flags['--inactive'] ||
+    parsed.flags['--or'];
+  if (hasStructuralFlags) {
+    output.error(
+      'Missing --condition. Use --condition to specify rule conditions, or use --ai or --json instead.'
+    );
+    return 1;
+  }
+
   // No mode specified — interactive or error
   if (client.stdin.isTTY && !client.nonInteractive) {
     // Interactive mode: offer AI vs manual choice

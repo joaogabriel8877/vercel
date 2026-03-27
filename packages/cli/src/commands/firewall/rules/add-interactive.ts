@@ -1,4 +1,3 @@
-import { isIP } from 'node:net';
 import chalk from 'chalk';
 import type Client from '../../../util/client';
 import output from '../../../output-manager';
@@ -538,7 +537,8 @@ function getActionDisplayName(action: string): string {
 
 /**
  * Per-type value validation for the interactive builder.
- * Returns true if valid, or an error string if invalid.
+ * Only enforces format constraints where the API strictly requires a specific format.
+ * Most types accept any string — the API validates semantics.
  */
 function validateConditionValue(
   val: string,
@@ -547,32 +547,6 @@ function validateConditionValue(
   if (!meta?.valueValidation) return true;
 
   switch (meta.valueValidation) {
-    case 'path':
-      if (!val.startsWith('/')) return 'Path must start with /';
-      return true;
-    case 'ip': {
-      if (isIP(val)) return true;
-      // Check CIDR
-      const slashIdx = val.lastIndexOf('/');
-      if (slashIdx !== -1) {
-        const ipPart = val.slice(0, slashIdx);
-        const prefix = Number.parseInt(val.slice(slashIdx + 1), 10);
-        const version = isIP(ipPart);
-        const maxPrefix = version === 4 ? 32 : 128;
-        if (
-          version &&
-          !Number.isNaN(prefix) &&
-          prefix >= 0 &&
-          prefix <= maxPrefix
-        )
-          return true;
-      }
-      return 'Please enter a valid IP address or CIDR range.';
-    }
-    case 'hostname':
-      if (!/^[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63})*$/.test(val))
-        return 'Please enter a valid hostname.';
-      return true;
     case 'digits':
       if (!/^\d+$/.test(val)) return 'Please enter digits only.';
       return true;

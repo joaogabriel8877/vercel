@@ -17,7 +17,7 @@ export interface ConditionTypeMeta {
   /** Preset values for select/multi-select in interactive mode */
   presetValues?: PresetValue[];
   /** Value validation type for interactive mode */
-  valueValidation?: 'ip' | 'path' | 'hostname' | 'digits' | null;
+  valueValidation?: 'digits' | null;
   planRequirement?: 'enterprise' | 'security-plus' | null;
   deprecated?: boolean;
 }
@@ -45,7 +45,6 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_AND_MATCH,
-    valueValidation: 'path',
   },
   {
     type: 'route',
@@ -54,7 +53,6 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_AND_MATCH,
-    valueValidation: 'path',
   },
   {
     type: 'raw_path',
@@ -63,7 +61,6 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_AND_MATCH,
-    valueValidation: 'path',
   },
   {
     type: 'server_action',
@@ -101,7 +98,6 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_AND_MATCH,
-    valueValidation: 'hostname',
   },
   {
     type: 'protocol',
@@ -144,7 +140,6 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'client',
     requiresKey: false,
     operators: STRING_ONLY,
-    valueValidation: 'ip',
   },
   {
     type: 'user_agent',

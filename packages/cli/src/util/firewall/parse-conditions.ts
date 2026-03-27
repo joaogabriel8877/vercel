@@ -107,6 +107,11 @@ export function parseConditionFlag(flag: string): FirewallCondition | string {
   // Validate operator — use per-type list when available, fall back to global for unknown types
   const validOps = meta ? meta.operators : ALL_OPERATORS;
   if (!validOps.includes(op)) {
+    // If this is a key-based type and the "key" looks like an operator, the user
+    // probably forgot the key: header:eq:val instead of header:mykey:eq:val
+    if (requiresKey && key && ALL_OPERATORS.includes(key)) {
+      return `Condition type "${type}" requires a key. Did you mean "${type}:<key>:${key}:${opRaw}"? Format: "${type}:key:op:value".`;
+    }
     return `Invalid operator "${opRaw}" for condition type "${type}". Valid operators: ${validOps.join(', ')}`;
   }
 
