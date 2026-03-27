@@ -26,6 +26,8 @@ import type {
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
 import { getCommandName } from '../../../util/pkg-name';
+import { handleAIAdd } from './add-ai';
+import { addInteractive } from './add-interactive';
 
 export default async function add(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(
@@ -54,7 +56,6 @@ export default async function add(client: Client, argv: string[]) {
   // Mode dispatch
   if (aiPrompt) {
     // AI mode
-    const { handleAIAdd } = await import('./add-ai');
     const link = await ensureProjectLink(client);
     if (typeof link === 'number') return link;
     const { project, org } = link;
@@ -103,7 +104,6 @@ export default async function add(client: Client, argv: string[]) {
     const teamId = org.type === 'team' ? org.id : undefined;
 
     if (mode === 'ai') {
-      const { handleAIAdd } = await import('./add-ai');
       return handleAIAdd(client, project, teamId, {
         skipPrompts: false,
       });
@@ -117,7 +117,6 @@ export default async function add(client: Client, argv: string[]) {
     }
 
     // Manual interactive mode
-    const { addInteractive } = await import('./add-interactive');
     return addInteractive(client, project, teamId, {
       skipPrompts: !!parsed.flags['--yes'],
     });
