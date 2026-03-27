@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
 import output from '../../../output-manager';
+import getScope from '../../../util/get-scope';
 import {
   confirmAction,
   detectExistingDraft,
@@ -26,6 +27,11 @@ import type {
 } from '../../../util/firewall/types';
 import stamp from '../../../util/output/stamp';
 
+interface PlanInfo {
+  isEnterprise: boolean;
+  hasSecurityPlus: boolean;
+}
+
 interface AddInteractiveOptions {
   skipPrompts?: boolean;
   prePopulated?: Partial<FirewallRule>;
@@ -38,6 +44,22 @@ export async function addInteractive(
   opts: AddInteractiveOptions = {}
 ): Promise<number> {
   const pre = opts.prePopulated;
+
+  // Fetch team plan info for condition type filtering
+  let planInfo: PlanInfo = { isEnterprise: false, hasSecurityPlus: false };
+  try {
+    const { team } = await getScope(client);
+    if (team) {
+      planInfo = {
+        isEnterprise: team.billing.plan === 'enterprise',
+        hasSecurityPlus:
+          (team as unknown as { securityPlus?: { enabled?: boolean } })
+            .securityPlus?.enabled === true,
+      };
+    }
+  } catch {
+    // If we can't fetch team info, show all types (API will validate)
+  }
 
   // 1. Name
   const name = await client.input.text({
@@ -59,6 +81,7 @@ export async function addInteractive(
   // 3. Condition builder
   const conditionGroups = await buildConditionGroupLoop(
     client,
+    planInfo,
     pre?.conditionGroup
   );
 
@@ -140,6 +163,7 @@ export async function addInteractive(
 
 async function buildConditionGroupLoop(
   client: Client,
+  planInfo: PlanInfo,
   prePopulated?: FirewallConditionGroup[]
 ): Promise<FirewallConditionGroup[]> {
   const groups: FirewallConditionGroup[] = prePopulated
@@ -148,7 +172,7 @@ async function buildConditionGroupLoop(
 
   if (groups.length === 0) {
     // Build first condition
-    const condition = await buildConditionInteractive(client);
+    const condition = await buildConditionInteractive(client, planInfo);
     groups.push({ conditions: [condition] });
   }
 
@@ -191,7 +215,7 @@ async function buildConditionGroupLoop(
       break;
     }
 
-    const condition = await buildConditionInteractive(client);
+    const condition = await buildConditionInteractive(client, planInfo);
 
     if (choice === 'and') {
       groups[groups.length - 1].conditions.push(condition);
@@ -206,12 +230,23 @@ async function buildConditionGroupLoop(
 // --- Single condition builder ---
 
 async function buildConditionInteractive(
-  client: Client
+  client: Client,
+  planInfo: PlanInfo
 ): Promise<FirewallCondition> {
-  // Group condition types by category, showing plan-gated types with badges
+  // Filter condition types based on plan — match dashboard behavior
+  // Enterprise types hidden for non-enterprise, Security Plus hidden for non-security-plus
+  const availableTypes = CONDITION_TYPES.filter(ct => {
+    if (ct.deprecated) return false;
+    if (ct.planRequirement === 'enterprise' && !planInfo.isEnterprise)
+      return false;
+    if (ct.planRequirement === 'security-plus' && !planInfo.hasSecurityPlus)
+      return false;
+    return true;
+  });
+
+  // Group by category
   const categories = new Map<string, ConditionTypeMeta[]>();
-  for (const ct of CONDITION_TYPES) {
-    if (ct.deprecated) continue;
+  for (const ct of availableTypes) {
     const existing = categories.get(ct.category) || [];
     existing.push(ct);
     categories.set(ct.category, existing);
@@ -226,15 +261,9 @@ async function buildConditionInteractive(
       name: chalk.dim(`── ${label} ──`),
     });
     for (const ct of types) {
-      let badge = '';
-      if (ct.planRequirement === 'enterprise') {
-        badge = ` ${chalk.yellow('[Enterprise]')}`;
-      } else if (ct.planRequirement === 'security-plus') {
-        badge = ` ${chalk.blue('[Security Plus]')}`;
-      }
       choices.push({
         value: ct.type,
-        name: `  ${ct.displayName}${badge}  ${chalk.dim(ct.description)}`,
+        name: `  ${ct.displayName}  ${chalk.dim(ct.description)}`,
       });
     }
   }
