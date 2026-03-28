@@ -111,6 +111,7 @@ export default async function unblock(client: Client, argv: string[]) {
       {
         action: 'ip.remove',
         id: rule.id,
+        value: null,
       },
       { teamId }
     );
