@@ -229,7 +229,7 @@ async function buildConditionGroupLoop(
 
 // --- Single condition builder ---
 
-async function buildConditionInteractive(
+export async function buildConditionInteractive(
   client: Client,
   planInfo: PlanInfo
 ): Promise<FirewallCondition> {

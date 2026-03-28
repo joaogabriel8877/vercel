@@ -163,6 +163,7 @@ export async function handleAIAdd(
         choices: [
           { value: 'create', name: 'Create this rule' },
           { value: 'edit-ai', name: 'Edit with AI (describe changes)' },
+          { value: 'edit-manual', name: 'Edit manually (field by field)' },
           { value: 'discard', name: 'Discard' },
         ],
       });
@@ -218,6 +219,21 @@ export async function handleAIAdd(
         );
         continue;
       }
+    }
+
+    if (choice === 'edit-manual') {
+      const { runInteractiveEditLoop } = await import('./edit-interactive');
+      const prePopulated = {
+        ...currentRule!,
+        id: '(new)',
+      } as FirewallRule;
+      const modified = await runInteractiveEditLoop(client, prePopulated);
+      if (!modified) {
+        // User didn't save — back to review menu
+        continue;
+      }
+      // Create with the modified rule
+      return createFromGenerated(client, project, teamId, modified, opts);
     }
 
     if (choice === 'discard') {
