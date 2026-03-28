@@ -444,6 +444,101 @@ describe('firewall rules edit', () => {
 
   // Interactive mode is tested manually (requires TTY)
 
+  // ─── Non-interactive ───────────────────────────────────────────────
+
+  describe('non-interactive', () => {
+    // Note: "no flags in non-TTY" test omitted — uses process.exit(1) which crashes vitest
+
+    it('should work with flags in non-TTY', async () => {
+      const active = createConfig({ rules: [createRule(1)] });
+      useListFirewallConfigs(active, null);
+      usePatchDraft();
+      useActivateConfig();
+      (client.stdin as any).isTTY = false;
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'Test Rule 1',
+        '--action',
+        'log',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('updated and staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+  });
+
+  // ─── Edge cases ────────────────────────────────────────────────────
+
+  describe('edge cases', () => {
+    it('should verify rules.update patch action is sent', async () => {
+      const active = createConfig({ rules: [createRule(1)] });
+      useListFirewallConfigs(active, null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'Test Rule 1',
+        '--action',
+        'deny',
+        '--duration',
+        '1h',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('updated and staged');
+      expect(await exitCodePromise).toEqual(0);
+
+      expect(lastPatchBody.action).toBe('rules.update');
+      expect(lastPatchBody.id).toBe('rule_001');
+      expect(lastPatchBody.value.name).toBe('Test Rule 1');
+      expect(lastPatchBody.value.action.mitigate.action).toBe('deny');
+      expect(lastPatchBody.value.action.mitigate.actionDuration).toBe('1h');
+    });
+
+    it('should handle invalid action in edit', async () => {
+      const active = createConfig({ rules: [createRule(1)] });
+      useListFirewallConfigs(active, null);
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'Test Rule 1',
+        '--action',
+        'invalid',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Invalid action');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should handle invalid duration in edit', async () => {
+      const active = createConfig({ rules: [createRule(1)] });
+      useListFirewallConfigs(active, null);
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'Test Rule 1',
+        '--duration',
+        '2h',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Invalid duration');
+      expect(await exitCodePromise).toEqual(1);
+    });
+  });
+
   // ─── offerAutoPublish ──────────────────────────────────────────────
 
   describe('offerAutoPublish', () => {
