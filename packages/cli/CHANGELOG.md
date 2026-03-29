@@ -1,5 +1,15 @@
 # vercel
 
+## 50.38.0
+
+### Minor Changes
+
+- [services] Check vercel.ts also in hasExperimentalServicesConfig ([#15736](https://github.com/vercel/vercel/pull/15736))
+
+### Patch Changes
+
+- Emit Claude Code plugin hint to stderr when running inside Claude Code ([#15728](https://github.com/vercel/vercel/pull/15728))
+
 ## 50.37.3
 
 ### Patch Changes
